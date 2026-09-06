@@ -1,0 +1,20 @@
+import { chromium } from 'playwright';
+const PID = 'player_zKIEYUQHwHal';
+(async () => {
+  const browser = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium-1194/chrome-linux/chrome', args: ['--no-sandbox'] });
+  const page = await browser.newPage({ viewport: { width: 420, height: 900 } });
+  await page.goto('http://localhost:5173', { waitUntil: 'networkidle' });
+  await page.evaluate((id) => localStorage.setItem('hc_player_id', id), PID);
+  await page.goto('http://localhost:5173/home', { waitUntil: 'networkidle' });
+  await page.waitForTimeout(600);
+  await page.screenshot({ path: '/tmp/seeded_home.png', fullPage: true });
+  await page.click('a:has-text("Progress")');
+  await page.waitForTimeout(500);
+  await page.screenshot({ path: '/tmp/seeded_progress.png', fullPage: true });
+  await page.click('a:has-text("Coach")');
+  await page.waitForTimeout(500);
+  await page.click('button:has-text(\"Fix My Plan\")');
+  await page.waitForTimeout(1200);
+  await page.screenshot({ path: '/tmp/seeded_coach.png', fullPage: true });
+  await browser.close();
+})();

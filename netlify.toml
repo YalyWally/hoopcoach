@@ -1,0 +1,41 @@
+# Netlify deployment config for HoopCoach.
+#
+# The frontend (React/Vite) builds to a static site; the backend (Express)
+# runs as a single serverless function that the whole /api/* path is
+# redirected to. See README.md's "Deploying to Netlify" section for the
+# required environment variables (Turso database, Anthropic API key, VAPID
+# push keys) — the app will build without them but most features will run
+# in their "not connected" fallback mode until they're set.
+
+[build]
+  command = "cd backend && npm install && cd ../frontend && npm install && npm run build"
+  publish = "frontend/dist"
+  functions = "backend/netlify/functions"
+
+[functions]
+  node_bundler = "esbuild"
+  # @libsql/client ships platform-specific native binaries — tell esbuild not
+  # to try to inline it as JS, so Netlify instead packages the real module
+  # (and the right native binary, installed during the build command above)
+  # alongside the function.
+  external_node_modules = ["@libsql/client", "libsql"]
+
+# Every 5 minutes, checks for workout/meal/retest reminders to push — the
+# serverless equivalent of the setInterval() used in local dev.
+[functions."notification-sweep"]
+  schedule = "*/5 * * * *"
+
+# The whole backend API lives behind one function; this makes it reachable
+# at the same /api/... paths the frontend already calls in local dev.
+[[redirects]]
+  from = "/api/*"
+  to = "/.netlify/functions/api/:splat"
+  status = 200
+
+# Client-side routing (react-router) — any path not otherwise matched (not a
+# real static file, not /api) should fall back to index.html so a hard
+# refresh on e.g. /plan or /coach doesn't 404.
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200

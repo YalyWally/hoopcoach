@@ -1,0 +1,23 @@
+{
+  "name": "hoopcoach-backend",
+  "version": "1.0.0",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "node --watch src/server.js",
+    "seed": "node src/db/seed.js",
+    "generate-vapid-keys": "node scripts/generate-vapid-keys.mjs"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.32.1",
+    "@libsql/client": "^0.18.0",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.21.0",
+    "express-async-errors": "^3.1.1",
+    "nanoid": "^5.0.7",
+    "serverless-http": "^4.0.0",
+    "web-push": "^3.6.7"
+  }
+}

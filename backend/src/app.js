@@ -1,6 +1,6 @@
 // The core Express app — no listen()/timer here so it can be reused by both
 // the local dev entrypoint (server.js) and the Netlify serverless function
-// (netlify/functions/api.js). Routes are mounted at their bare paths (no
+// (netlify/functions/hoopcoach-api.mjs). Routes are mounted at their bare paths (no
 // leading /api); whichever entrypoint loads this app is responsible for
 // putting it behind an /api prefix (see server.js and the Netlify function).
 import 'express-async-errors'; // makes Express 4 forward rejected promises from async handlers to the error middleware

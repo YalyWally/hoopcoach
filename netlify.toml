@@ -27,9 +27,11 @@
 
 # The whole backend API lives behind one function; this makes it reachable
 # at the same /api/... paths the frontend already calls in local dev.
+# (Function is named "hoopcoach-api", not "api" — see the comment in
+# backend/netlify/functions/hoopcoach-api.mjs for why.)
 [[redirects]]
   from = "/api/*"
-  to = "/.netlify/functions/api/:splat"
+  to = "/.netlify/functions/hoopcoach-api/:splat"
   status = 200
 
 # Client-side routing (react-router) — any path not otherwise matched (not a

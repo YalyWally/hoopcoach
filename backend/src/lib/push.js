@@ -1,23 +1,16 @@
 import webpush from 'web-push';
 import fs from 'fs';
-import path from 'path';
-import { fileURLToPath } from 'url';
 import db from '../db/index.js';
 import { newId } from './ids.js';
 import { todayISO } from './dates.js';
 
-// See the matching comment in db/index.js — `import.meta.url` only resolves
-// in real ESM, and whether a bundler leaves a working `__dirname` behind
-// instead isn't something we can rely on from here. So this is only computed
-// inside the local-dev-only branch below (never reached when
-// VAPID_PUBLIC_KEY/VAPID_PRIVATE_KEY are set, and never reached at all in
-// serverless) — meaning it never actually runs in production.
-function vapidPath() {
-  const dir = typeof __dirname !== 'undefined'
-    ? __dirname
-    : path.dirname(fileURLToPath(import.meta.url));
-  return path.join(dir, '../../vapid.json');
-}
+// See the matching comment in db/index.js — this used to locate its own
+// folder via `import.meta.url` to build an absolute path, but that doesn't
+// survive being bundled into a single serverless function reliably. `npm run
+// dev`/`npm start` always run from inside `backend/` (see package.json), so
+// a plain relative path resolves to `backend/vapid.json` there with no
+// bundler-dependent path resolution needed at all.
+const VAPID_PATH = './vapid.json';
 
 function loadOrCreateVapidKeys() {
   if (process.env.VAPID_PUBLIC_KEY && process.env.VAPID_PRIVATE_KEY) {
@@ -32,7 +25,6 @@ function loadOrCreateVapidKeys() {
     console.warn('VAPID_PUBLIC_KEY / VAPID_PRIVATE_KEY are not set — push notifications are disabled until they are configured. Run `npm run generate-vapid-keys` once and set the result as env vars.');
     return null;
   }
-  const VAPID_PATH = vapidPath();
   if (fs.existsSync(VAPID_PATH)) {
     return JSON.parse(fs.readFileSync(VAPID_PATH, 'utf-8'));
   }

@@ -9,17 +9,26 @@
 // Rather than rewrite every call site's shape, this exports a small shim that
 // keeps the familiar `db.prepare(sql).get/all/run(...params)` call pattern from
 // better-sqlite3, just async now — so callers only need to add `await`.
-import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { createClient } from '@libsql/client';
+import { SCHEMA_SQL } from './schema.js';
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
+// `import.meta.url` gets bundled into a plain CJS function for Netlify — and in
+// that bundled form `__dirname`/`__filename` already exist as real Node CJS
+// globals, while `import.meta.url` can come through as undefined and crash
+// `fileURLToPath()`. This prefers the real CJS global when present (bundled
+// serverless) and only falls back to the ESM-only computation for local dev
+// (`node src/server.js`), where there is no bundler and `__dirname` isn't
+// declared at all — `typeof` on an undeclared identifier is safe and never throws.
+const moduleDir = typeof __dirname !== 'undefined'
+  ? __dirname
+  : path.dirname(fileURLToPath(import.meta.url));
 
 // In production (Netlify), set TURSO_DATABASE_URL + TURSO_AUTH_TOKEN to point at
 // a real Turso database. For local dev/testing, falling back to a local SQLite
 // file keeps everything working with zero extra setup.
-const DB_URL = process.env.TURSO_DATABASE_URL || `file:${process.env.DB_PATH || path.join(__dirname, '../../data.db')}`;
+const DB_URL = process.env.TURSO_DATABASE_URL || `file:${process.env.DB_PATH || path.join(moduleDir, '../../data.db')}`;
 const AUTH_TOKEN = process.env.TURSO_AUTH_TOKEN || undefined;
 
 const client = createClient({ url: DB_URL, authToken: AUTH_TOKEN });
@@ -30,8 +39,7 @@ function ensureReady() {
   if (!readyPromise) {
     readyPromise = (async () => {
       await client.execute('PRAGMA foreign_keys = ON').catch(() => {});
-      const schema = fs.readFileSync(path.join(__dirname, 'schema.sql'), 'utf-8');
-      await client.executeMultiple(schema);
+      await client.executeMultiple(SCHEMA_SQL);
     })();
   }
   return readyPromise;

@@ -6,8 +6,13 @@ import db from '../db/index.js';
 import { newId } from './ids.js';
 import { todayISO } from './dates.js';
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const VAPID_PATH = path.join(__dirname, '../../vapid.json');
+// See the matching comment in db/index.js — this prefers the real CJS
+// `__dirname` global that exists once Netlify's bundler compiles this to CJS,
+// and only computes it from `import.meta.url` for local (unbundled) dev.
+const moduleDir = typeof __dirname !== 'undefined'
+  ? __dirname
+  : path.dirname(fileURLToPath(import.meta.url));
+const VAPID_PATH = path.join(moduleDir, '../../vapid.json');
 
 function loadOrCreateVapidKeys() {
   if (process.env.VAPID_PUBLIC_KEY && process.env.VAPID_PRIVATE_KEY) {

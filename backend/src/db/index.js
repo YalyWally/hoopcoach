@@ -14,21 +14,32 @@ import { fileURLToPath } from 'url';
 import { createClient } from '@libsql/client';
 import { SCHEMA_SQL } from './schema.js';
 
-// `import.meta.url` gets bundled into a plain CJS function for Netlify — and in
-// that bundled form `__dirname`/`__filename` already exist as real Node CJS
-// globals, while `import.meta.url` can come through as undefined and crash
-// `fileURLToPath()`. This prefers the real CJS global when present (bundled
-// serverless) and only falls back to the ESM-only computation for local dev
-// (`node src/server.js`), where there is no bundler and `__dirname` isn't
-// declared at all — `typeof` on an undeclared identifier is safe and never throws.
-const moduleDir = typeof __dirname !== 'undefined'
-  ? __dirname
-  : path.dirname(fileURLToPath(import.meta.url));
+// `import.meta.url` only resolves correctly in real ESM. Once Netlify's
+// bundler compiles this to a single CJS function, `import.meta.url` can come
+// through empty and crash `fileURLToPath()` — and *whether* a real `__dirname`
+// global is available to fall back on turns out to depend on bundler-internal
+// settings we don't control from netlify.toml, so detecting our way around it
+// isn't reliable. Instead, this is wrapped in a function that's only ever
+// called for the local-dev fallback path below (when TURSO_DATABASE_URL is
+// unset) — in production that call never happens, so this code never runs
+// there at all, regardless of how the bundler handles it.
+function localDbUrl() {
+  try {
+    const dir = typeof __dirname !== 'undefined'
+      ? __dirname
+      : path.dirname(fileURLToPath(import.meta.url));
+    return `file:${process.env.DB_PATH || path.join(dir, '../../data.db')}`;
+  } catch {
+    // Last-resort fallback so local dev still works even if both of the
+    // above somehow fail — resolves relative to wherever node was launched.
+    return `file:${process.env.DB_PATH || './data.db'}`;
+  }
+}
 
 // In production (Netlify), set TURSO_DATABASE_URL + TURSO_AUTH_TOKEN to point at
 // a real Turso database. For local dev/testing, falling back to a local SQLite
 // file keeps everything working with zero extra setup.
-const DB_URL = process.env.TURSO_DATABASE_URL || `file:${process.env.DB_PATH || path.join(moduleDir, '../../data.db')}`;
+const DB_URL = process.env.TURSO_DATABASE_URL || localDbUrl();
 const AUTH_TOKEN = process.env.TURSO_AUTH_TOKEN || undefined;
 
 const client = createClient({ url: DB_URL, authToken: AUTH_TOKEN });

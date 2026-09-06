@@ -6,13 +6,18 @@ import db from '../db/index.js';
 import { newId } from './ids.js';
 import { todayISO } from './dates.js';
 
-// See the matching comment in db/index.js — this prefers the real CJS
-// `__dirname` global that exists once Netlify's bundler compiles this to CJS,
-// and only computes it from `import.meta.url` for local (unbundled) dev.
-const moduleDir = typeof __dirname !== 'undefined'
-  ? __dirname
-  : path.dirname(fileURLToPath(import.meta.url));
-const VAPID_PATH = path.join(moduleDir, '../../vapid.json');
+// See the matching comment in db/index.js — `import.meta.url` only resolves
+// in real ESM, and whether a bundler leaves a working `__dirname` behind
+// instead isn't something we can rely on from here. So this is only computed
+// inside the local-dev-only branch below (never reached when
+// VAPID_PUBLIC_KEY/VAPID_PRIVATE_KEY are set, and never reached at all in
+// serverless) — meaning it never actually runs in production.
+function vapidPath() {
+  const dir = typeof __dirname !== 'undefined'
+    ? __dirname
+    : path.dirname(fileURLToPath(import.meta.url));
+  return path.join(dir, '../../vapid.json');
+}
 
 function loadOrCreateVapidKeys() {
   if (process.env.VAPID_PUBLIC_KEY && process.env.VAPID_PRIVATE_KEY) {
@@ -27,6 +32,7 @@ function loadOrCreateVapidKeys() {
     console.warn('VAPID_PUBLIC_KEY / VAPID_PRIVATE_KEY are not set — push notifications are disabled until they are configured. Run `npm run generate-vapid-keys` once and set the result as env vars.');
     return null;
   }
+  const VAPID_PATH = vapidPath();
   if (fs.existsSync(VAPID_PATH)) {
     return JSON.parse(fs.readFileSync(VAPID_PATH, 'utf-8'));
   }
